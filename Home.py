@@ -220,36 +220,10 @@ if search_clicked and search_query.strip():
         except Exception as e:
             st.error(f"An error occurred during search: {str(e)}")
 
-# Sample data display
+# Only show sample data when no search has been performed
 if not search_clicked or not search_query.strip():
     st.markdown("---")
-    st.subheader("📊 Sample Data")
-    
-    try:
-        # Show sample tenders
-        tables = st.session_state.db_util.get_table_names()
-        if tables:
-            sample_data = st.session_state.db_util.get_sample_data(tables[0], 10)
-            
-            if not sample_data.empty:
-                st.markdown(f"**Sample from {tables[0]} table:**")
-                st.dataframe(sample_data, use_container_width=True)
-                
-                # Download button
-                csv = sample_data.to_csv(index=False)
-                st.download_button(
-                    label="📥 Download Sample Data",
-                    data=csv,
-                    file_name="sample_tenders.csv",
-                    mime="text/csv"
-                )
-            else:
-                st.info("No sample data available")
-        else:
-            st.warning("No tables found in database")
-            
-    except Exception as e:
-        st.error(f"Error loading sample data: {str(e)}")
+    st.info("💡 **Ready to search!** Use the buttons above or enter your own search query to find tenders in the database.")
 
 # Footer
 st.markdown("---")
