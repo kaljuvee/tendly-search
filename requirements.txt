@@ -1,0 +1,9 @@
+streamlit
+sqlalchemy
+psycopg2-binary
+python-dotenv
+langchain
+langchain-openai
+langchain-community
+pandas
+plotly
