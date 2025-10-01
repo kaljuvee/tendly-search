@@ -5,8 +5,22 @@ AI-powered tender database search and analysis platform.
 
 import streamlit as st
 import pandas as pd
-from utils.search_util import get_tender_search_agent
-from utils.db_util import get_database_util
+import sys
+import os
+
+# Add the current directory to Python path for imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+try:
+    from utils.search_util import get_tender_search_agent
+    from utils.db_util import get_database_util
+except ImportError:
+    # Fallback imports
+    import utils.search_util as search_util
+    import utils.db_util as db_util
+    get_tender_search_agent = search_util.get_tender_search_agent
+    get_database_util = db_util.get_database_util
+
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
@@ -195,84 +209,25 @@ if search_clicked and search_query.strip():
                 }
                 enhanced_query += f" {time_mapping[time_filter]}"
             
-            # Try AI search first, fallback to simple search
-            try:
-                result = st.session_state.search_agent.search_tenders(enhanced_query, limit=50)
+            # Execute AI search
+            result = st.session_state.search_agent.search_tenders(enhanced_query, limit=50)
+            
+            if result["success"]:
+                st.success(f"✅ Search completed successfully!")
                 
-                if result["success"] and result.get("results"):
-                    st.success(f"✅ AI Search completed successfully!")
-                    
-                    # Display results
-                    st.markdown("### 📊 Results")
-                    
-                    # Try to parse and display structured results
-                    if isinstance(result["results"], str):
-                        st.markdown(result["results"])
-                    else:
-                        st.write(result["results"])
+                # Display results
+                st.markdown("### 📊 Search Results")
+                
+                # Parse and display the AI results properly
+                if isinstance(result["results"], str):
+                    # The AI returns formatted text, display it nicely
+                    st.markdown(result["results"])
                 else:
-                    raise Exception("AI search returned no results")
-                    
-            except Exception as ai_error:
-                # Fallback to simple search
-                st.warning("🔄 AI search unavailable, using direct database search...")
+                    st.write(result["results"])
                 
-                from utils.simple_search import SimpleSearchAgent
-                simple_agent = SimpleSearchAgent()
-                
-                # Map search queries to simple search functions
-                search_lower = search_query.lower()
-                
-                if any(word in search_lower for word in ['construction', 'ehitus', 'building']):
-                    result = simple_agent.search_construction_tenders(limit=20)
-                elif any(word in search_lower for word in ['harjumaa', 'harju', 'tallinn']):
-                    result = simple_agent.search_harjumaa_tenders(limit=20)
-                elif any(word in search_lower for word in ['high value', 'expensive', 'large']):
-                    result = simple_agent.search_high_value_tenders(min_value=min_value or 100000, limit=20)
-                elif any(word in search_lower for word in ['recent', 'new', 'latest']):
-                    result = simple_agent.search_recent_tenders(limit=20)
-                elif any(word in search_lower for word in ['it', 'software', 'tarkvara', 'technology']):
-                    result = simple_agent.search_it_tenders(limit=20)
-                elif any(word in search_lower for word in ['active', 'open', 'current']):
-                    result = simple_agent.search_active_tenders(limit=20)
-                else:
-                    # Extract main keyword for general search
-                    keywords = search_query.split()
-                    main_keyword = keywords[0] if keywords else search_query
-                    result = simple_agent.search_by_keyword(main_keyword, limit=20)
-                
-                simple_agent.close()
-                
-                if result["success"] and result.get("results") is not None and len(result["results"]) > 0:
-                    st.success(f"✅ Found {result['count']} results using direct search!")
-                    
-                    # Display results as DataFrame
-                    st.markdown("### 📊 Search Results")
-                    df = pd.DataFrame(result["results"])
-                    
-                    # Format the dataframe for better display
-                    if not df.empty:
-                        # Format estimated_value if it exists
-                        if 'estimated_value' in df.columns:
-                            df['estimated_value'] = df['estimated_value'].apply(
-                                lambda x: f"€{x:,.0f}" if pd.notnull(x) and x > 0 else "Not specified"
-                            )
-                        
-                        st.dataframe(df, use_container_width=True)
-                        
-                        # Download button
-                        csv = df.to_csv(index=False)
-                        st.download_button(
-                            label="📥 Download Results",
-                            data=csv,
-                            file_name=f"tender_search_results.csv",
-                            mime="text/csv"
-                        )
-                    else:
-                        st.info("No results found for your search.")
-                else:
-                    st.error(f"❌ Search failed: {result.get('error', 'No results found')}")
-                    st.info("💡 Try rephrasing your search or check the search tips.")
+            else:
+                st.error(f"❌ Search failed: {result['error']}")
+                st.info("💡 Try rephrasing your search or check the search tips.")
                 
         except Exception as e:
             st.error(f"An error occurred during search: {str(e)}")
