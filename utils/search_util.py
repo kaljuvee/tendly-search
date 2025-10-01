@@ -29,7 +29,7 @@ class TenderSearchAgent:
         
         # Initialize OpenAI client
         self.llm = ChatOpenAI(
-            model="gpt-4",
+            model="gpt-4.1-mini",
             temperature=0,
             openai_api_key=os.getenv("OPENAI_API_KEY")
         )
